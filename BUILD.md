@@ -2,6 +2,14 @@
 
 RASON Meta Link Fix v1.0.1
 
+## Source layout
+
+- `src/main.go` — application source
+- `embed_windows_resources.py` — Windows PE resource embedder
+- `app.manifest` — UAC / Common Controls / DPI manifest
+- `go.mod` — Go module definition
+- The exact `.ico` / `.png` branding assets used by v1.0.1 are included in the downloadable v1.0.1 release ZIP.
+
 ## Environment
 
 - Go 1.23.x
@@ -19,6 +27,7 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
   go build -trimpath -ldflags="-s -w -H=windowsgui" \
   -o RASON-Meta-Link-Fix.exe ./src
 
+# For the exact published branding, extract assets/RASON-Meta-Link-Fix.ico from the v1.0.1 release ZIP first.
 python embed_windows_resources.py RASON-Meta-Link-Fix.exe \
   --icon assets/RASON-Meta-Link-Fix.ico \
   --manifest app.manifest
