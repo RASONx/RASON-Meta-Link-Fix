@@ -998,3 +998,149 @@ func wndProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr {
 		exactWnd = createControl("STATIC", tr.exactChangeText, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 406, 745, 26, hwnd, 0, fontNormal)
 		safetyWnd = createControl("STATIC", tr.safetyLine, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 438, 745, 24, hwnd, 0, fontSmall)
 
+		btnApplyWnd = createControl("BUTTON", tr.btnApply, WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 30, 492, 235, 42, hwnd, ID_APPLY, fontNormal)
+		btnRestoreWnd = createControl("BUTTON", tr.btnRestore, WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 280, 492, 235, 42, hwnd, ID_RESTORE, fontNormal)
+		btnRestartWnd = createControl("BUTTON", tr.btnRestart, WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 530, 492, 245, 42, hwnd, ID_RESTART, fontNormal)
+		btnLaunchWnd = createControl("BUTTON", tr.btnLaunch, WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 30, 548, 235, 36, hwnd, ID_LAUNCH, fontSmall)
+		btnRefreshWnd = createControl("BUTTON", tr.btnRefresh, WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 280, 548, 235, 36, hwnd, ID_REFRESH, fontSmall)
+		btnLogWnd = createControl("BUTTON", tr.btnLog, WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 530, 548, 245, 36, hwnd, ID_LOG, fontSmall)
+		footerWnd = createControl("STATIC", tr.footerReady, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 610, 745, 42, hwnd, 0, fontSmall)
+		refreshStatusAsync(true)
+		return 0
+	case WM_COMMAND:
+		switch loWord(wParam) {
+		case ID_APPLY:
+			doApply()
+		case ID_RESTORE:
+			doRestore()
+		case ID_RESTART:
+			doRestart()
+		case ID_LAUNCH:
+			if err := launchMeta(); err != nil {
+				msgBox(hwnd, appName, tr.launchErr+err.Error(), MB_OK|MB_ICONERROR)
+			}
+		case ID_REFRESH:
+			refreshStatusAsync(true)
+		case ID_LOG:
+			openLog()
+		case ID_LANG:
+			if tr.code == "de" {
+				tr = en
+			} else {
+				tr = de
+			}
+			applyLanguage()
+		}
+		return 0
+	case WM_APP_WORK_DONE:
+		finishJob()
+		return 0
+	case WM_APP_STATUS_DONE:
+		resultMu.Lock()
+		sr := lastStatus
+		resultMu.Unlock()
+		if sr.seq == uint32(wParam) && sr.seq == statusSeq {
+			fixColor = sr.color
+			setText(fixStateWnd, sr.state)
+			setText(statusWnd, sr.details)
+			if !busy && sr.notify {
+				setText(footerWnd, tr.footerRefreshed)
+			}
+		}
+		return 0
+	case WM_CTLCOLORSTATIC:
+		hdc := wParam
+		procSetBkMode.Call(hdc, TRANSPARENT)
+		if syscall.Handle(lParam) == fixStateWnd {
+			procSetTextColor.Call(hdc, uintptr(fixColor))
+		} else if syscall.Handle(lParam) == adminWnd {
+			procSetTextColor.Call(hdc, uintptr(rgb(22, 128, 73)))
+		} else if syscall.Handle(lParam) == subtitleWnd || syscall.Handle(lParam) == sectionWnd || syscall.Handle(lParam) == exactTitleWnd || syscall.Handle(lParam) == safetyWnd || syscall.Handle(lParam) == footerWnd {
+			procSetTextColor.Call(hdc, uintptr(rgb(92, 100, 112)))
+		} else {
+			procSetTextColor.Call(hdc, uintptr(rgb(30, 35, 42)))
+		}
+		brush, _, _ := procGetSysColorBrush.Call(COLOR_WINDOW)
+		return brush
+	case WM_CLOSE:
+		if busy {
+			closing = true
+			// Hide immediately so Close always feels responsive; the short service operation
+			// is allowed to finish safely in the background before the process exits.
+			procShowWindow.Call(uintptr(hwnd), SW_HIDE)
+			return 0
+		}
+		procDestroyWindow.Call(uintptr(hwnd))
+		return 0
+	case WM_DESTROY:
+		for _, f := range []syscall.Handle{fontTitle, fontSubtitle, fontStatus, fontNormal, fontSmall} {
+			if f != 0 {
+				procDeleteObject.Call(uintptr(f))
+			}
+		}
+		for _, ic := range []syscall.Handle{iconLarge, iconSmall} {
+			if ic != 0 {
+				procDestroyIcon.Call(uintptr(ic))
+			}
+		}
+		mainWnd = 0
+		procPostQuitMessage.Call(0)
+		return 0
+	}
+	r, _, _ := procDefWindowProcW.Call(uintptr(hwnd), uintptr(msg), wParam, lParam)
+	return r
+}
+
+func runGUI() error {
+	hInst, _, _ := procGetModuleHandleW.Call(0)
+	className := utf16ptr("RASON_META_LINK_FIX_V101_WINDOW")
+	iconLarge = loadResourceIcon(hInst, 32)
+	iconSmall = loadResourceIcon(hInst, 16)
+	wc := WNDCLASSEX{CbSize: uint32(unsafe.Sizeof(WNDCLASSEX{})), LpfnWndProc: syscall.NewCallback(wndProc), HInstance: syscall.Handle(hInst), HIcon: iconLarge, HIconSm: iconSmall, HbrBackground: syscall.Handle(COLOR_WINDOW + 1), LpszClassName: className}
+	atom, _, err := procRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
+	if atom == 0 {
+		return fmt.Errorf("RegisterClassExW failed: %v", err)
+	}
+	hwnd, _, err := procCreateWindowExW.Call(0, uintptr(unsafe.Pointer(className)), uintptr(unsafe.Pointer(utf16ptr(tr.windowTitle+"  v"+appVersion))), WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX, uintptr(int32(160)), uintptr(int32(85)), uintptr(int32(830)), uintptr(int32(710)), 0, 0, hInst, 0)
+	if hwnd == 0 {
+		return fmt.Errorf("CreateWindowExW failed: %v", err)
+	}
+	procShowWindow.Call(hwnd, SW_SHOW)
+	procUpdateWindow.Call(hwnd)
+	var msg MSG
+	for {
+		r, _, e := procGetMessageW.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
+		if int32(r) == -1 {
+			return fmt.Errorf("GetMessage failed: %v", e)
+		}
+		if r == 0 {
+			break
+		}
+		procTranslateMessage.Call(uintptr(unsafe.Pointer(&msg)))
+		procDispatchMessageW.Call(uintptr(unsafe.Pointer(&msg)))
+	}
+	return nil
+}
+
+func main() {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	tr = systemLanguage()
+	logf("Start %s v%s", appName, appVersion)
+	if !isAdmin() {
+		msgBox(0, tr.adminRequiredTitle, tr.adminRequiredText, MB_OK|MB_ICONINFORMATION)
+		if err := elevateSelf(); err != nil {
+			logf("Elevation failed: %v", err)
+			msgBox(0, tr.adminRequiredTitle, err.Error(), MB_OK|MB_ICONERROR)
+		}
+		return
+	}
+	if !showDisclaimer() {
+		logf("Safety notice declined")
+		return
+	}
+	if err := runGUI(); err != nil {
+		logf("Fatal: %v", err)
+		msgBox(0, appName, err.Error(), MB_OK|MB_ICONERROR)
+	}
+}
