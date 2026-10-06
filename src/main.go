@@ -599,3 +599,203 @@ func nvidiaInfo(lp langPack) string {
 	}
 	return lp.notFound
 }
+}
+func metaBase() string {
+	key := `SOFTWARE\Oculus VR, LLC\Oculus`
+	if s, ok := regQueryString(HKEY_LOCAL_MACHINE, key, "Base", KEY_WOW64_64KEY); ok && s != "" {
+		return s
+	}
+	if s, ok := regQueryString(HKEY_LOCAL_MACHINE, key, "Base", KEY_WOW64_32KEY); ok && s != "" {
+		return s
+	}
+	if pf := os.Getenv("ProgramFiles"); pf != "" {
+		c := filepath.Join(pf, "Oculus")
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	return ""
+}
+func metaVersion(lp langPack) string {
+	key := `SOFTWARE\Oculus VR, LLC\Oculus`
+	for _, n := range []string{"Version", "CoreVersion", "ClientVersion"} {
+		if s, ok := regQueryString(HKEY_LOCAL_MACHINE, key, n, KEY_WOW64_64KEY); ok && strings.TrimSpace(s) != "" {
+			return s
+		}
+		if s, ok := regQueryString(HKEY_LOCAL_MACHINE, key, n, KEY_WOW64_32KEY); ok && strings.TrimSpace(s) != "" {
+			return s
+		}
+	}
+	return lp.versionUnknown
+}
+func metaClientPath() string {
+	base := metaBase()
+	var c []string
+	if base != "" {
+		c = append(c, filepath.Join(base, "Support", "oculus-client", "OculusClient.exe"), filepath.Join(base, "OculusClient.exe"))
+	}
+	if pf := os.Getenv("ProgramFiles"); pf != "" {
+		c = append(c, filepath.Join(pf, "Oculus", "Support", "oculus-client", "OculusClient.exe"))
+	}
+	for _, p := range c {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
+
+type svcState int
+
+const (
+	svcUnknown svcState = iota
+	svcStopped
+	svcStartPending
+	svcStopPending
+	svcRunning
+)
+
+func serviceStateRaw() svcState {
+	out, err := hiddenOutput(3*time.Second, "sc.exe", "query", "OVRService")
+	if err != nil && len(out) == 0 {
+		return svcUnknown
+	}
+	s := string(out)
+	re := regexp.MustCompile(`(?im)^\s*(?:STATE|ZUSTAND)\s*:\s*([1-7])\b`)
+	if m := re.FindStringSubmatch(s); len(m) == 2 {
+		switch m[1] {
+		case "1":
+			return svcStopped
+		case "2":
+			return svcStartPending
+		case "3":
+			return svcStopPending
+		case "4":
+			return svcRunning
+		}
+	}
+	u := strings.ToUpper(s)
+	switch {
+	case strings.Contains(u, "RUNNING"):
+		return svcRunning
+	case strings.Contains(u, "STOP_PENDING"):
+		return svcStopPending
+	case strings.Contains(u, "START_PENDING"):
+		return svcStartPending
+	case strings.Contains(u, "STOPPED"):
+		return svcStopped
+	}
+	return svcUnknown
+}
+func serviceStateText(lp langPack) string {
+	switch serviceStateRaw() {
+	case svcRunning:
+		return lp.serviceRunning
+	case svcStopped:
+		return lp.serviceStopped
+	case svcStartPending:
+		return lp.serviceStarting
+	case svcStopPending:
+		return lp.serviceStopping
+	default:
+		return lp.serviceUnknown
+	}
+}
+func waitService(target svcState, max time.Duration) bool {
+	deadline := time.Now().Add(max)
+	for time.Now().Before(deadline) {
+		if serviceStateRaw() == target {
+			return true
+		}
+		time.Sleep(450 * time.Millisecond)
+	}
+	return serviceStateRaw() == target
+}
+func restartService() error {
+	logf("OVRService restart requested")
+	state := serviceStateRaw()
+	if state == svcRunning || state == svcStopPending || state == svcStartPending {
+		out, err := hiddenOutput(5*time.Second, "sc.exe", "stop", "OVRService")
+		logf("sc stop OVRService: %s", strings.TrimSpace(string(out)))
+		if err != nil && !strings.Contains(strings.ToUpper(string(out)), "SERVICE_NOT_ACTIVE") {
+			return fmt.Errorf("stop failed: %v / %s", err, strings.TrimSpace(string(out)))
+		}
+		if !waitService(svcStopped, 15*time.Second) {
+			return fmt.Errorf("OVRService did not stop in time")
+		}
+	}
+	out, err := hiddenOutput(5*time.Second, "sc.exe", "start", "OVRService")
+	logf("sc start OVRService: %s", strings.TrimSpace(string(out)))
+	if err != nil && !strings.Contains(strings.ToUpper(string(out)), "SERVICE_ALREADY_RUNNING") {
+		return fmt.Errorf("start failed: %v / %s", err, strings.TrimSpace(string(out)))
+	}
+	if !waitService(svcRunning, 15*time.Second) {
+		return fmt.Errorf("OVRService did not start in time")
+	}
+	logf("OVRService is running")
+	return nil
+}
+func transportInfo(lp langPack) string {
+	p := filepath.Join(os.Getenv("LOCALAPPDATA"), "Oculus", "DeviceCache.json")
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return lp.transportUnknown
+	}
+	var temp any
+	if json.Unmarshal(b, &temp) != nil {
+		return lp.transportUnknown
+	}
+	compact := strings.ToLower(strings.Join(strings.Fields(string(b)), ""))
+	if strings.Contains(compact, `"isusingairlink":false`) {
+		return lp.transportWired
+	}
+	if strings.Contains(compact, `"isusingairlink":true`) {
+		return lp.transportAir
+	}
+	return lp.transportUnknown
+}
+
+func statusSnapshot(lp langPack) (string, string, uint32) {
+	slices, exists, err := regQueryDWORD(HKEY_CURRENT_USER, linkKey, "NumSlices", 0)
+	state := lp.statusInactive
+	color := rgb(180, 45, 45)
+	setting := "Default"
+	if lp.code == "de" {
+		setting = "Standard"
+	}
+	if err != nil {
+		state = lp.statusOther
+		if lp.code == "de" {
+			setting = "Registry-Lesefehler"
+		} else {
+			setting = "Registry read error"
+		}
+		color = rgb(170, 110, 0)
+	} else if exists && slices == 1 {
+		state = lp.statusActive
+		setting = "OFF · NumSlices=1"
+		color = rgb(22, 128, 73)
+	} else if exists {
+		state = lp.statusOther
+		setting = fmt.Sprintf("NumSlices=%d", slices)
+		color = rgb(170, 110, 0)
+	}
+	base := metaBase()
+	if base == "" {
+		base = lp.notFound
+	}
+	backup := lp.backupNo
+	if backupExists() {
+		backup = lp.backupYes
+	}
+	details := fmt.Sprintf("%s:  %s\r\n%s:  %s\r\n%s:  %s\r\n%s:  %s\r\n%s:  %s\r\n%s:  %s\r\n%s:  %s",
+		lp.labelNvidia, nvidiaInfo(lp), lp.labelMeta, base, lp.labelMetaVersion, metaVersion(lp), lp.labelTransport, transportInfo(lp), lp.labelService, serviceStateText(lp), lp.labelSetting, setting, lp.labelBackup, backup)
+	return state, details, color
+}
+func setControlsEnabled(enabled bool) {
+	v := uintptr(0)
+	if enabled {
+		v = 1
+	}
+	for _, h := range []syscall.Handle{btnApplyWnd, btnRestoreWnd, btnRestartWnd, btnLaunchWnd, btnRefreshWnd, btnLogWnd, btnLangWnd} {
+		if h != 0 {
