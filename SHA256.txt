@@ -1,0 +1,4 @@
+# SHA-256 checksums for v1.0.1
+
+13c996ab78bd9d3f4bd738df5bae8c72fdef7b76e130e2e5ba6cbeb790d166b4  RASON-Meta-Link-Fix-v1.0.1.exe
+41e66e1af530fcf95bc9054a1f4126e2e9b966fdf686a40a38bd1a2f07920602  RASON-Meta-Link-Fix-v1.0.1.zip
