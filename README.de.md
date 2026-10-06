@@ -48,11 +48,11 @@ Dadurch kann der ursprüngliche Zustand wiederhergestellt werden.
 
 ## Download
 
-**Aktuelle Version: [RASON Meta Link Fix v1.0.1](https://github.com/businessrason-boop/RASON-Meta-Link-Fix/releases/tag/v1.0.1)**
+**Aktuelle Version: [RASON Meta Link Fix v1.0.1](https://github.com/RASONx/RASON-Meta-Link-Fix/releases/tag/v1.0.1)**
 
 Direkte Downloads:
-- [RASON-Meta-Link-Fix-v1.0.1.exe](https://github.com/businessrason-boop/RASON-Meta-Link-Fix/releases/download/v1.0.1/RASON-Meta-Link-Fix-v1.0.1.exe)
-- [RASON-Meta-Link-Fix-v1.0.1.zip](https://github.com/businessrason-boop/RASON-Meta-Link-Fix/releases/download/v1.0.1/RASON-Meta-Link-Fix-v1.0.1.zip)
+- [RASON-Meta-Link-Fix-v1.0.1.exe](https://github.com/RASONx/RASON-Meta-Link-Fix/releases/download/v1.0.1/RASON-Meta-Link-Fix-v1.0.1.exe)
+- [RASON-Meta-Link-Fix-v1.0.1.zip](https://github.com/RASONx/RASON-Meta-Link-Fix/releases/download/v1.0.1/RASON-Meta-Link-Fix-v1.0.1.zip)
 - Prüfsummen: [`SHA256.txt`](SHA256.txt)
 
 ## Verwendung
