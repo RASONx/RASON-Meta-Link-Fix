@@ -398,3 +398,204 @@ func regCreateOrOpen(root uintptr, subkey string, sam uint32) (syscall.Handle, e
 	var h syscall.Handle
 	var disp uint32
 	r, _, _ := procRegCreateKeyExW.Call(root, uintptr(unsafe.Pointer(utf16ptr(subkey))), 0, 0, 0, uintptr(sam), 0, uintptr(unsafe.Pointer(&h)), uintptr(unsafe.Pointer(&disp)))
+	if r != ERROR_SUCCESS {
+		return 0, syscall.Errno(r)
+	}
+	return h, nil
+}
+func regOpen(root uintptr, subkey string, sam uint32) (syscall.Handle, error) {
+	var h syscall.Handle
+	r, _, _ := procRegOpenKeyExW.Call(root, uintptr(unsafe.Pointer(utf16ptr(subkey))), 0, uintptr(sam), uintptr(unsafe.Pointer(&h)))
+	if r != ERROR_SUCCESS {
+		return 0, syscall.Errno(r)
+	}
+	return h, nil
+}
+func regClose(h syscall.Handle) { procRegCloseKey.Call(uintptr(h)) }
+func regQueryDWORD(root uintptr, subkey, name string, wow uint32) (uint32, bool, error) {
+	h, err := regOpen(root, subkey, KEY_QUERY_VALUE|wow)
+	if err != nil {
+		if e, ok := err.(syscall.Errno); ok && uintptr(e) == ERROR_FILE_NOT_FOUND {
+			return 0, false, nil
+		}
+		return 0, false, err
+	}
+	defer regClose(h)
+	var typ, data, size uint32
+	size = 4
+	r, _, _ := procRegQueryValueExW.Call(uintptr(h), uintptr(unsafe.Pointer(utf16ptr(name))), 0, uintptr(unsafe.Pointer(&typ)), uintptr(unsafe.Pointer(&data)), uintptr(unsafe.Pointer(&size)))
+	if r == ERROR_FILE_NOT_FOUND {
+		return 0, false, nil
+	}
+	if r != ERROR_SUCCESS {
+		return 0, false, syscall.Errno(r)
+	}
+	if typ != REG_DWORD || size != 4 {
+		return 0, true, fmt.Errorf("unexpected registry type for %s", name)
+	}
+	return data, true, nil
+}
+func regSetDWORD(root uintptr, subkey, name string, value uint32) error {
+	h, err := regCreateOrOpen(root, subkey, KEY_SET_VALUE|KEY_CREATE_SUB_KEY)
+	if err != nil {
+		return err
+	}
+	defer regClose(h)
+	r, _, _ := procRegSetValueExW.Call(uintptr(h), uintptr(unsafe.Pointer(utf16ptr(name))), 0, REG_DWORD, uintptr(unsafe.Pointer(&value)), 4)
+	if r != ERROR_SUCCESS {
+		return syscall.Errno(r)
+	}
+	return nil
+}
+func regDeleteValue(root uintptr, subkey, name string) error {
+	h, err := regOpen(root, subkey, KEY_SET_VALUE)
+	if err != nil {
+		if e, ok := err.(syscall.Errno); ok && uintptr(e) == ERROR_FILE_NOT_FOUND {
+			return nil
+		}
+		return err
+	}
+	defer regClose(h)
+	r, _, _ := procRegDeleteValueW.Call(uintptr(h), uintptr(unsafe.Pointer(utf16ptr(name))))
+	if r == ERROR_FILE_NOT_FOUND {
+		return nil
+	}
+	if r != ERROR_SUCCESS {
+		return syscall.Errno(r)
+	}
+	return nil
+}
+func regQueryString(root uintptr, subkey, name string, wow uint32) (string, bool) {
+	h, err := regOpen(root, subkey, KEY_QUERY_VALUE|wow)
+	if err != nil {
+		return "", false
+	}
+	defer regClose(h)
+	var typ, size uint32
+	r, _, _ := procRegQueryValueExW.Call(uintptr(h), uintptr(unsafe.Pointer(utf16ptr(name))), 0, uintptr(unsafe.Pointer(&typ)), 0, uintptr(unsafe.Pointer(&size)))
+	if r != ERROR_SUCCESS || size < 2 || (typ != REG_SZ && typ != 2) {
+		return "", false
+	}
+	buf := make([]uint16, size/2+1)
+	r, _, _ = procRegQueryValueExW.Call(uintptr(h), uintptr(unsafe.Pointer(utf16ptr(name))), 0, uintptr(unsafe.Pointer(&typ)), uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
+	if r != ERROR_SUCCESS {
+		return "", false
+	}
+	s := syscall.UTF16ToString(buf)
+	if typ == 2 {
+		s = os.ExpandEnv(s)
+	}
+	return s, true
+}
+
+func ensureBackup() error {
+	captured, ok, err := regQueryDWORD(HKEY_CURRENT_USER, appKey, "BackupCaptured", 0)
+	if err != nil {
+		return err
+	}
+	if ok && captured == 1 {
+		return nil
+	}
+	v, exists, err := regQueryDWORD(HKEY_CURRENT_USER, linkKey, "NumSlices", 0)
+	if err != nil {
+		return fmt.Errorf("NumSlices backup failed: %w", err)
+	}
+	if exists {
+		if err := regSetDWORD(HKEY_CURRENT_USER, appKey, "BackupNumSlicesExisted", 1); err != nil {
+			return err
+		}
+		if err := regSetDWORD(HKEY_CURRENT_USER, appKey, "BackupNumSlicesValue", v); err != nil {
+			return err
+		}
+	} else {
+		if err := regSetDWORD(HKEY_CURRENT_USER, appKey, "BackupNumSlicesExisted", 0); err != nil {
+			return err
+		}
+		_ = regDeleteValue(HKEY_CURRENT_USER, appKey, "BackupNumSlicesValue")
+	}
+	if err := regSetDWORD(HKEY_CURRENT_USER, appKey, "BackupCaptured", 1); err != nil {
+		return err
+	}
+	logf("Backup captured: NumSlices existed=%v value=%d", exists, v)
+	return nil
+}
+func applyFix() error {
+	if err := ensureBackup(); err != nil {
+		return err
+	}
+	if err := regSetDWORD(HKEY_CURRENT_USER, linkKey, "NumSlices", 1); err != nil {
+		return fmt.Errorf("could not set NumSlices=1: %w", err)
+	}
+	v, exists, err := regQueryDWORD(HKEY_CURRENT_USER, linkKey, "NumSlices", 0)
+	if err != nil || !exists || v != 1 {
+		return fmt.Errorf("write verification failed (exists=%v value=%d error=%v)", exists, v, err)
+	}
+	_ = regSetDWORD(HKEY_CURRENT_USER, appKey, "FixActive", 1)
+	logf("Fix applied and read-back verified: HKCU\\%s\\NumSlices=1", linkKey)
+	return nil
+}
+func restoreFix() error {
+	captured, ok, err := regQueryDWORD(HKEY_CURRENT_USER, appKey, "BackupCaptured", 0)
+	if err != nil {
+		return err
+	}
+	if !ok || captured != 1 {
+		return fmt.Errorf("no backup created by this app is available; nothing was changed")
+	}
+	existed, _, err := regQueryDWORD(HKEY_CURRENT_USER, appKey, "BackupNumSlicesExisted", 0)
+	if err != nil {
+		return err
+	}
+	if existed == 1 {
+		old, ok, err := regQueryDWORD(HKEY_CURRENT_USER, appKey, "BackupNumSlicesValue", 0)
+		if err != nil || !ok {
+			return fmt.Errorf("backup value is missing or invalid")
+		}
+		if err := regSetDWORD(HKEY_CURRENT_USER, linkKey, "NumSlices", old); err != nil {
+			return err
+		}
+		logf("Original setting restored: NumSlices=%d", old)
+	} else {
+		if err := regDeleteValue(HKEY_CURRENT_USER, linkKey, "NumSlices"); err != nil {
+			return err
+		}
+		logf("Original state restored: NumSlices was unset")
+	}
+	_ = regDeleteValue(HKEY_CURRENT_USER, appKey, "BackupCaptured")
+	_ = regDeleteValue(HKEY_CURRENT_USER, appKey, "BackupNumSlicesExisted")
+	_ = regDeleteValue(HKEY_CURRENT_USER, appKey, "BackupNumSlicesValue")
+	_ = regDeleteValue(HKEY_CURRENT_USER, appKey, "FixActive")
+	return nil
+}
+func backupExists() bool {
+	v, ok, _ := regQueryDWORD(HKEY_CURRENT_USER, appKey, "BackupCaptured", 0)
+	return ok && v == 1
+}
+
+func hiddenOutput(timeout time.Duration, name string, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	c := exec.CommandContext(ctx, name, args...)
+	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	out, err := c.CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		return out, fmt.Errorf("command timed out: %s", name)
+	}
+	return out, err
+}
+func nvidiaInfo(lp langPack) string {
+	windir := os.Getenv("WINDIR")
+	if windir == "" {
+		windir = `C:\Windows`
+	}
+	for _, p := range []string{filepath.Join(windir, "System32", "nvidia-smi.exe"), "nvidia-smi.exe"} {
+		out, err := hiddenOutput(3*time.Second, p, "--query-gpu=name,driver_version", "--format=csv,noheader")
+		if err == nil {
+			line := strings.TrimSpace(string(out))
+			if line != "" {
+				return strings.Split(line, "\n")[0]
+			}
+		}
+	}
+	return lp.notFound
+}
