@@ -198,3 +198,203 @@ type langPack struct {
 	btnLaunch          string
 	btnRefresh         string
 	btnLog             string
+	btnLanguage        string
+	footerReady        string
+	footerApplied      string
+	footerRestored     string
+	footerRefreshed    string
+	footerWorking      string
+	footerChecking     string
+	notFound           string
+	versionUnknown     string
+	transportUnknown   string
+	transportWired     string
+	transportAir       string
+	serviceRunning     string
+	serviceStopped     string
+	serviceStarting    string
+	serviceStopping    string
+	serviceUnknown     string
+	disclaimerTitle    string
+	disclaimerMain     string
+	disclaimerBody     string
+	adminRequiredTitle string
+	adminRequiredText  string
+	applyOkTitle       string
+	applyOkText        string
+	applyErrTitle      string
+	applyErrText       string
+	restoreAsk         string
+	restoreOk          string
+	restoreErr         string
+	restartOk          string
+	restartErr         string
+	launchErr          string
+	logErr             string
+}
+
+var de = langPack{
+	code: "de", windowTitle: "RASON Meta Link Fix", subtitle: "Meta Horizon Link · NVIDIA Freeze Workaround", badgeAdmin: "Als Administrator ausgeführt",
+	sectionStatus: "SYSTEM- UND FIXSTATUS", statusActive: "FIX AKTIV", statusInactive: "FIX NICHT AKTIV", statusOther: "ABWEICHENDE EINSTELLUNG",
+	labelNvidia: "NVIDIA", labelMeta: "Meta Horizon Link", labelMetaVersion: "Meta-Version", labelTransport: "Verbindung", labelService: "OVRService", labelSetting: "Sliced Encoding", labelBackup: "Backup", backupYes: "Originalzustand gesichert", backupNo: "Noch kein Backup angelegt",
+	exactChange: "WAS DIE APP ÄNDERT", exactChangeText: "HKCU\\Software\\Oculus\\RemoteHeadset\\NumSlices = 1  ·  danach Neustart von OVRService",
+	safetyLine: "Keine Treiber-/DLL-Patches · kein Downgrade · keine Meta-Dateien verändert · kein Netzwerkzugriff",
+	btnApply:   "Fix anwenden", btnRestore: "Original wiederherstellen", btnRestart: "OVRService neu starten", btnLaunch: "Meta Horizon Link öffnen", btnRefresh: "Status aktualisieren", btnLog: "Diagnose-Log öffnen", btnLanguage: "English",
+	footerReady: "Bereit. Bestehende Link-Session vor Änderungen am besten trennen.", footerApplied: "Fix ist aktiv, verifiziert und OVRService wurde neu initialisiert.", footerRestored: "Originaleinstellung wurde wiederhergestellt.", footerRefreshed: "Status wurde aktualisiert.", footerWorking: "Vorgang läuft… Die Oberfläche bleibt bedienbar.", footerChecking: "Systemstatus wird geprüft…",
+	notFound: "Nicht gefunden", versionUnknown: "Nicht aus Registry lesbar", transportUnknown: "Nicht erkannt", transportWired: "Kabel-Link zuletzt erkannt", transportAir: "Air Link zuletzt erkannt",
+	serviceRunning: "Läuft", serviceStopped: "Gestoppt", serviceStarting: "Startet", serviceStopping: "Wird gestoppt", serviceUnknown: "Unbekannt",
+	disclaimerTitle: "RASON Meta Link Fix · Sicherheitshinweis", disclaimerMain: "Bitte vor dem Fortfahren lesen",
+	disclaimerBody:     "Dieser unabhängige Community-Fix adressiert den Meta-Horizon-Link-Freeze mit neueren NVIDIA-Treibern, indem er ausschließlich Sliced Encoding deaktiviert (NumSlices=1) und den Meta-Link-Dienst OVRService neu startet.\n\nDer Fix patcht KEINE NVIDIA- oder Meta-Binaries, installiert oder entfernt KEINEN Grafiktreiber, blendet die Meta-Warnung NICHT aus und verändert KEINE weiteren Windows-Grafikeinstellungen. Vor der ersten Änderung wird der vorhandene NumSlices-Zustand gesichert und kann wiederhergestellt werden.\n\nDie App ist kein offizielles Produkt von Meta oder NVIDIA. Der zugrunde liegende Workaround wurde auf einem betroffenen Quest-3/NVIDIA-System erfolgreich gegen Freezes/Stutter getestet. Für andere Hardware- und Softwarestände kann keine Garantie gegeben werden. Nutzung auf eigenes Risiko.\n\nMit „Ja“ akzeptierst du den Hinweis und startest die App.",
+	adminRequiredTitle: "Administratorrechte erforderlich", adminRequiredText: "Diese App muss als Administrator ausgeführt werden, damit OVRService zuverlässig neu gestartet werden kann. Windows zeigt jetzt eine UAC-Abfrage.",
+	applyOkTitle: "Fix aktiviert", applyOkText: "Sliced Encoding wurde deaktiviert (NumSlices=1), der Wert wurde zurückgelesen und OVRService wurde neu gestartet. Du kannst Meta Horizon Link jetzt testen.",
+	applyErrTitle: "Fix konnte nicht vollständig angewendet werden", applyErrText: "Der Vorgang ist fehlgeschlagen:\n\n",
+	restoreAsk: "Originale Sliced-Encoding-Einstellung wirklich wiederherstellen? Der beim ersten Anwenden gesicherte Zustand wird zurückgesetzt.", restoreOk: "Originaleinstellung wurde wiederhergestellt. Bei einer laufenden Link-Session bitte neu verbinden oder OVRService neu starten.", restoreErr: "Wiederherstellung fehlgeschlagen:\n\n",
+	restartOk: "OVRService wurde erfolgreich neu gestartet.", restartErr: "OVRService konnte nicht neu gestartet werden:\n\n", launchErr: "Meta Horizon Link konnte nicht gestartet werden:\n\n", logErr: "Diagnose-Log konnte nicht geöffnet werden:\n\n",
+}
+
+var en = langPack{
+	code: "en", windowTitle: "RASON Meta Link Fix", subtitle: "Meta Horizon Link · NVIDIA Freeze Workaround", badgeAdmin: "Running as administrator",
+	sectionStatus: "SYSTEM AND FIX STATUS", statusActive: "FIX ACTIVE", statusInactive: "FIX NOT ACTIVE", statusOther: "NON-STANDARD SETTING",
+	labelNvidia: "NVIDIA", labelMeta: "Meta Horizon Link", labelMetaVersion: "Meta version", labelTransport: "Connection", labelService: "OVRService", labelSetting: "Sliced Encoding", labelBackup: "Backup", backupYes: "Original state backed up", backupNo: "No backup created yet",
+	exactChange: "WHAT THIS APP CHANGES", exactChangeText: "HKCU\\Software\\Oculus\\RemoteHeadset\\NumSlices = 1  ·  then restarts OVRService",
+	safetyLine: "No driver/DLL patches · no downgrade · no Meta files modified · no network access",
+	btnApply:   "Apply fix", btnRestore: "Restore original", btnRestart: "Restart OVRService", btnLaunch: "Open Meta Horizon Link", btnRefresh: "Refresh status", btnLog: "Open diagnostics log", btnLanguage: "Deutsch",
+	footerReady: "Ready. It is best to disconnect an active Link session before making changes.", footerApplied: "Fix is active, verified, and OVRService was reinitialized.", footerRestored: "Original setting restored.", footerRefreshed: "Status refreshed.", footerWorking: "Operation in progress… The interface remains responsive.", footerChecking: "Checking system status…",
+	notFound: "Not found", versionUnknown: "Not readable from registry", transportUnknown: "Not detected", transportWired: "Wired Link last detected", transportAir: "Air Link last detected",
+	serviceRunning: "Running", serviceStopped: "Stopped", serviceStarting: "Starting", serviceStopping: "Stopping", serviceUnknown: "Unknown",
+	disclaimerTitle: "RASON Meta Link Fix · Safety notice", disclaimerMain: "Please read before continuing",
+	disclaimerBody:     "This independent community workaround targets the Meta Horizon Link freeze seen with newer NVIDIA drivers by changing only one Link encoder setting: Sliced Encoding is disabled (NumSlices=1), then the Meta Link service OVRService is restarted.\n\nThe tool does NOT patch NVIDIA or Meta binaries, does NOT install or remove a graphics driver, does NOT hide Meta's warning, and does NOT change other Windows graphics settings. Before the first change, the existing NumSlices state is backed up and can be restored.\n\nThis is not an official Meta or NVIDIA product. The underlying workaround has successfully eliminated freezes/stutter on an affected Quest 3/NVIDIA system. No guarantee can be made for every hardware/software combination. Use at your own risk.\n\nChoose “Yes” to accept this notice and start the app.",
+	adminRequiredTitle: "Administrator rights required", adminRequiredText: "This app runs as administrator so it can reliably restart OVRService. Windows will now show a UAC prompt.",
+	applyOkTitle: "Fix enabled", applyOkText: "Sliced Encoding was disabled (NumSlices=1), the value was read back successfully, and OVRService was restarted. You can test Meta Horizon Link now.",
+	applyErrTitle: "Fix could not be fully applied", applyErrText: "The operation failed:\n\n",
+	restoreAsk: "Restore the original Sliced Encoding setting? The state captured before the first change will be restored.", restoreOk: "Original setting restored. If a Link session is active, reconnect it or restart OVRService.", restoreErr: "Restore failed:\n\n",
+	restartOk: "OVRService restarted successfully.", restartErr: "OVRService could not be restarted:\n\n", launchErr: "Meta Horizon Link could not be started:\n\n", logErr: "Diagnostics log could not be opened:\n\n",
+}
+
+var (
+	tr                                                                                            = en
+	mainWnd                                                                                       syscall.Handle
+	titleWnd, subtitleWnd, adminWnd, sectionWnd                                                   syscall.Handle
+	fixStateWnd, statusWnd, exactTitleWnd, exactWnd, safetyWnd, footerWnd                         syscall.Handle
+	btnApplyWnd, btnRestoreWnd, btnRestartWnd, btnLaunchWnd, btnRefreshWnd, btnLogWnd, btnLangWnd syscall.Handle
+	fontTitle, fontSubtitle, fontStatus, fontNormal, fontSmall                                    syscall.Handle
+	iconLarge, iconSmall                                                                          syscall.Handle
+	fixColor                                                                                      uint32
+	busy, closing                                                                                 bool
+	resultMu                                                                                      sync.Mutex
+	lastJob                                                                                       jobResult
+	lastStatus                                                                                    statusResult
+	statusSeq                                                                                     uint32
+)
+
+type jobKind uint16
+
+const (
+	jobApply jobKind = iota + 1
+	jobRestore
+	jobRestart
+)
+
+type jobResult struct {
+	kind    jobKind
+	err     error
+	warning error
+}
+
+type statusResult struct {
+	seq     uint32
+	state   string
+	details string
+	color   uint32
+	notify  bool
+}
+
+func utf16ptr(s string) *uint16 { p, _ := syscall.UTF16PtrFromString(s); return p }
+func loWord(v uintptr) uint16   { return uint16(v & 0xffff) }
+func rgb(r, g, b byte) uint32   { return uint32(r) | uint32(g)<<8 | uint32(b)<<16 }
+
+func setText(hwnd syscall.Handle, s string) {
+	if hwnd != 0 {
+		procSetWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(utf16ptr(s))))
+	}
+}
+func msgBox(hwnd syscall.Handle, title, text string, flags uintptr) int {
+	r, _, _ := procMessageBoxW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(utf16ptr(text))), uintptr(unsafe.Pointer(utf16ptr(title))), flags)
+	return int(r)
+}
+
+func systemLanguage() langPack {
+	r, _, _ := procGetUserDefaultUILanguage.Call()
+	primary := uint16(r) & 0x03ff
+	if primary == 0x07 {
+		return de
+	}
+	return en
+}
+
+func showDisclaimer() bool {
+	var pressed int32
+	if err := procTaskDialog.Find(); err == nil {
+		hr, _, _ := procTaskDialog.Call(0, 0,
+			uintptr(unsafe.Pointer(utf16ptr(tr.disclaimerTitle))),
+			uintptr(unsafe.Pointer(utf16ptr(tr.disclaimerMain))),
+			uintptr(unsafe.Pointer(utf16ptr(tr.disclaimerBody))),
+			TDCBF_YES_BUTTON|TDCBF_NO_BUTTON, 0,
+			uintptr(unsafe.Pointer(&pressed)))
+		if int32(hr) >= 0 {
+			return pressed == IDYES
+		}
+	}
+	return msgBox(0, tr.disclaimerTitle, tr.disclaimerMain+"\n\n"+tr.disclaimerBody, MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON1) == IDYES
+}
+
+func isAdmin() bool { r, _, _ := procIsUserAnAdmin.Call(); return r != 0 }
+func elevateSelf() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	r, _, callErr := procShellExecuteW.Call(0,
+		uintptr(unsafe.Pointer(utf16ptr("runas"))),
+		uintptr(unsafe.Pointer(utf16ptr(exe))), 0, 0, SW_SHOW)
+	if r <= 32 {
+		if callErr != nil && callErr != syscall.Errno(0) {
+			return callErr
+		}
+		return fmt.Errorf("ShellExecute error code %d", r)
+	}
+	return nil
+}
+
+func logPath() string {
+	base := os.Getenv("LOCALAPPDATA")
+	if base == "" {
+		base = os.TempDir()
+	}
+	dir := filepath.Join(base, "RASON", "MetaLinkFix")
+	_ = os.MkdirAll(dir, 0755)
+	return filepath.Join(dir, "MetaLinkFix.log")
+}
+
+func loadResourceIcon(hInst uintptr, size int32) syscall.Handle {
+	// Resource ID 1 is the application icon embedded by embed_windows_resources.py.
+	r, _, _ := procLoadImageW.Call(hInst, 1, IMAGE_ICON, uintptr(size), uintptr(size), 0)
+	if r != 0 {
+		return syscall.Handle(r)
+	}
+	r, _, _ = procLoadIconW.Call(0, IDI_APPLICATION)
+	return syscall.Handle(r)
+}
+
+func logf(format string, args ...any) {
+	line := fmt.Sprintf("%s  %s\r\n", time.Now().Format("2006-01-02 15:04:05"), fmt.Sprintf(format, args...))
+	if f, err := os.OpenFile(logPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+		_, _ = f.WriteString(line)
+		_ = f.Close()
+	}
+}
+
+func regCreateOrOpen(root uintptr, subkey string, sam uint32) (syscall.Handle, error) {
+	var h syscall.Handle
+	var disp uint32
+	r, _, _ := procRegCreateKeyExW.Call(root, uintptr(unsafe.Pointer(utf16ptr(subkey))), 0, 0, 0, uintptr(sam), 0, uintptr(unsafe.Pointer(&h)), uintptr(unsafe.Pointer(&disp)))
