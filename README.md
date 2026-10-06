@@ -48,12 +48,12 @@ so the original setting can be restored.
 
 ## Download
 
-Use the **Releases** section on this repository and download the latest version.
+**Latest release: [RASON Meta Link Fix v1.0.1](https://github.com/businessrason-boop/RASON-Meta-Link-Fix/releases/tag/v1.0.1)**
 
-For v1.0.1:
-- `RASON-Meta-Link-Fix-v1.0.1.exe`
-- `RASON-Meta-Link-Fix-v1.0.1.zip`
-- `SHA256.txt`
+Direct downloads:
+- [RASON-Meta-Link-Fix-v1.0.1.exe](https://github.com/businessrason-boop/RASON-Meta-Link-Fix/releases/download/v1.0.1/RASON-Meta-Link-Fix-v1.0.1.exe)
+- [RASON-Meta-Link-Fix-v1.0.1.zip](https://github.com/businessrason-boop/RASON-Meta-Link-Fix/releases/download/v1.0.1/RASON-Meta-Link-Fix-v1.0.1.zip)
+- Checksums: [`SHA256.txt`](SHA256.txt)
 
 ## Usage
 
