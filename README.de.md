@@ -18,6 +18,23 @@ Auf dem betroffenen Quest-3-/NVIDIA-System, auf dem dieses Projekt praktisch get
 
 Das ist ein erfolgreicher Praxistest auf einem tatsächlich betroffenen System, aber **keine Garantie dafür, dass damit jedes Meta-Link-Problem auf jedem PC gelöst wird**.
 
+## Manuelle Alternative / warum überhaupt eine App?
+
+Sliced Encoding kann auch direkt im **Oculus Debug Tool (ODT)** deaktiviert oder derselbe Registry-Wert manuell gesetzt werden. Dieses Projekt behauptet ausdrücklich nicht, einen geheimen Treiber-Patch zu enthalten.
+
+Die Anwendung ist ein kleiner reversibler Wrapper um diesen Workaround: Sie sichert den vorherigen Wert, setzt und überprüft die Einstellung, kann den Originalzustand wiederherstellen, startet `OVRService` neu und zeigt klar an, ob der Workaround aktiv ist.
+
+## Quellcode
+
+Der Quellcode der veröffentlichten v1.0.1-Anwendung liegt direkt in diesem Repository:
+
+- [`src/main.go`](src/main.go) — Windows-App, Oberfläche, Backup/Restore und Meta-Link-Service-Steuerung
+- [`embed_windows_resources.py`](embed_windows_resources.py) — Einbettung von Icon, Manifest und Versionsressourcen in die EXE
+- [`app.manifest`](app.manifest) — Windows-UAC-/DPI-Manifest
+- [`go.mod`](go.mod) — Go-Moduldefinition
+
+Diese Text-Quelldateien wurden aus dem v1.0.1-Releaseprojekt übernommen und anhand ihrer Git-Blob-Hashes verifiziert. Das herunterladbare v1.0.1-ZIP enthält zusätzlich die Branding-Assets, die für die veröffentlichte EXE verwendet wurden.
+
 ## Was der Fix NICHT macht
 
 - Er patcht oder ersetzt **keine NVIDIA-Treiber**.
