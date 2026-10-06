@@ -799,3 +799,203 @@ func setControlsEnabled(enabled bool) {
 	}
 	for _, h := range []syscall.Handle{btnApplyWnd, btnRestoreWnd, btnRestartWnd, btnLaunchWnd, btnRefreshWnd, btnLogWnd, btnLangWnd} {
 		if h != 0 {
+			procEnableWindow.Call(uintptr(h), v)
+		}
+	}
+}
+
+func refreshStatusAsync(showWorking bool) {
+	statusSeq++
+	seq := statusSeq
+	lp := tr
+	if showWorking && !busy {
+		setText(footerWnd, lp.footerChecking)
+	}
+	go func() {
+		state, details, color := statusSnapshot(lp)
+		resultMu.Lock()
+		lastStatus = statusResult{seq: seq, state: state, details: details, color: color, notify: showWorking}
+		resultMu.Unlock()
+		if mainWnd != 0 {
+			procPostMessageW.Call(uintptr(mainWnd), WM_APP_STATUS_DONE, uintptr(seq), 0)
+		}
+	}()
+}
+
+func shellOpen(path string) error {
+	r, _, err := procShellExecuteW.Call(0, uintptr(unsafe.Pointer(utf16ptr("open"))), uintptr(unsafe.Pointer(utf16ptr(path))), 0, 0, SW_SHOW)
+	if r <= 32 {
+		if err != nil && err != syscall.Errno(0) {
+			return err
+		}
+		return fmt.Errorf("ShellExecute error code %d", r)
+	}
+	return nil
+}
+func launchMeta() error {
+	p := metaClientPath()
+	if p == "" {
+		return fmt.Errorf("OculusClient.exe not found")
+	}
+	logf("Launching Meta Horizon Link: %s", p)
+	cmd := exec.Command(p)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: false}
+	return cmd.Start()
+}
+func openLog() {
+	p := logPath()
+	if _, err := os.Stat(p); os.IsNotExist(err) {
+		logf("Log created")
+	}
+	if err := shellOpen(p); err != nil {
+		msgBox(mainWnd, appName, tr.logErr+err.Error(), MB_OK|MB_ICONERROR)
+	}
+}
+
+func startJob(kind jobKind) {
+	if busy {
+		return
+	}
+	busy = true
+	setControlsEnabled(false)
+	setText(footerWnd, tr.footerWorking)
+	go func() {
+		res := jobResult{kind: kind}
+		switch kind {
+		case jobApply:
+			if err := applyFix(); err != nil {
+				logf("Apply error: %v", err)
+				res.err = err
+			} else if err := restartService(); err != nil {
+				logf("Service restart after apply failed: %v", err)
+				res.warning = err
+			}
+		case jobRestore:
+			if err := restoreFix(); err != nil {
+				logf("Restore error: %v", err)
+				res.err = err
+			} else if serviceStateRaw() != svcUnknown {
+				if err := restartService(); err != nil {
+					logf("Service restart after restore failed: %v", err)
+					res.warning = err
+				}
+			}
+		case jobRestart:
+			if err := restartService(); err != nil {
+				logf("Service restart error: %v", err)
+				res.err = err
+			}
+		}
+		resultMu.Lock()
+		lastJob = res
+		resultMu.Unlock()
+		if mainWnd != 0 {
+			procPostMessageW.Call(uintptr(mainWnd), WM_APP_WORK_DONE, uintptr(kind), 0)
+		}
+	}()
+}
+
+func finishJob() {
+	resultMu.Lock()
+	res := lastJob
+	resultMu.Unlock()
+	busy = false
+	setControlsEnabled(true)
+	if closing {
+		procDestroyWindow.Call(uintptr(mainWnd))
+		return
+	}
+	refreshStatusAsync(false)
+	switch res.kind {
+	case jobApply:
+		if res.err != nil {
+			setText(footerWnd, tr.footerReady)
+			msgBox(mainWnd, tr.applyErrTitle, tr.applyErrText+res.err.Error(), MB_OK|MB_ICONERROR)
+			return
+		}
+		setText(footerWnd, tr.footerApplied)
+		if res.warning != nil {
+			msgBox(mainWnd, tr.applyErrTitle, tr.applyOkText+"\n\nOVRService: "+res.warning.Error(), MB_OK|MB_ICONWARNING)
+		}
+	case jobRestore:
+		if res.err != nil {
+			setText(footerWnd, tr.footerReady)
+			msgBox(mainWnd, appName, tr.restoreErr+res.err.Error(), MB_OK|MB_ICONERROR)
+			return
+		}
+		setText(footerWnd, tr.footerRestored)
+		if res.warning != nil {
+			msgBox(mainWnd, appName, tr.restoreOk+"\n\nOVRService: "+res.warning.Error(), MB_OK|MB_ICONWARNING)
+		}
+	case jobRestart:
+		if res.err != nil {
+			setText(footerWnd, tr.footerReady)
+			msgBox(mainWnd, appName, tr.restartErr+res.err.Error(), MB_OK|MB_ICONERROR)
+			return
+		}
+		setText(footerWnd, tr.restartOk)
+	}
+}
+
+func doApply() { startJob(jobApply) }
+func doRestore() {
+	if msgBox(mainWnd, appName, tr.restoreAsk, MB_YESNO|MB_ICONWARNING) == IDYES {
+		startJob(jobRestore)
+	}
+}
+func doRestart() { startJob(jobRestart) }
+
+func createFont(height int32, weight int32) syscall.Handle {
+	r, _, _ := procCreateFontW.Call(uintptr(height), 0, 0, 0, uintptr(weight), 0, 0, 0, 1, 0, 0, 5, 0, uintptr(unsafe.Pointer(utf16ptr("Segoe UI"))))
+	return syscall.Handle(r)
+}
+func createControl(class, text string, style uint32, x, y, w, h int32, parent syscall.Handle, id uintptr, font syscall.Handle) syscall.Handle {
+	hwnd, _, _ := procCreateWindowExW.Call(0, uintptr(unsafe.Pointer(utf16ptr(class))), uintptr(unsafe.Pointer(utf16ptr(text))), uintptr(style), uintptr(x), uintptr(y), uintptr(w), uintptr(h), uintptr(parent), id, 0, 0)
+	if hwnd != 0 && font != 0 {
+		procSendMessageW.Call(hwnd, WM_SETFONT, uintptr(font), 1)
+	}
+	return syscall.Handle(hwnd)
+}
+
+func applyLanguage() {
+	setText(mainWnd, tr.windowTitle+"  v"+appVersion)
+	setText(titleWnd, tr.windowTitle)
+	setText(subtitleWnd, tr.subtitle)
+	setText(adminWnd, "✓  "+tr.badgeAdmin)
+	setText(sectionWnd, tr.sectionStatus)
+	setText(exactTitleWnd, tr.exactChange)
+	setText(exactWnd, tr.exactChangeText)
+	setText(safetyWnd, tr.safetyLine)
+	setText(btnApplyWnd, tr.btnApply)
+	setText(btnRestoreWnd, tr.btnRestore)
+	setText(btnRestartWnd, tr.btnRestart)
+	setText(btnLaunchWnd, tr.btnLaunch)
+	setText(btnRefreshWnd, tr.btnRefresh)
+	setText(btnLogWnd, tr.btnLog)
+	setText(btnLangWnd, tr.btnLanguage)
+	setText(footerWnd, tr.footerReady)
+	refreshStatusAsync(false)
+}
+
+func wndProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr {
+	switch msg {
+	case WM_CREATE:
+		mainWnd = hwnd
+		fontTitle = createFont(-26, FW_SEMIBOLD)
+		fontSubtitle = createFont(-14, FW_NORMAL)
+		fontStatus = createFont(-24, FW_BOLD)
+		fontNormal = createFont(-15, FW_NORMAL)
+		fontSmall = createFont(-13, FW_NORMAL)
+		titleWnd = createControl("STATIC", tr.windowTitle, WS_CHILD|WS_VISIBLE|SS_LEFT, 28, 20, 500, 36, hwnd, 0, fontTitle)
+		subtitleWnd = createControl("STATIC", tr.subtitle, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 58, 520, 24, hwnd, 0, fontSubtitle)
+		adminWnd = createControl("STATIC", "✓  "+tr.badgeAdmin, WS_CHILD|WS_VISIBLE|SS_LEFT, 565, 24, 210, 24, hwnd, 0, fontSmall)
+		btnLangWnd = createControl("BUTTON", tr.btnLanguage, WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 650, 55, 125, 30, hwnd, ID_LANG, fontSmall)
+
+		sectionWnd = createControl("STATIC", tr.sectionStatus, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 112, 300, 22, hwnd, 0, fontSmall)
+		fixStateWnd = createControl("STATIC", "…", WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 142, 740, 36, hwnd, 0, fontStatus)
+		statusWnd = createControl("STATIC", "", WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 188, 745, 172, hwnd, 0, fontNormal)
+
+		exactTitleWnd = createControl("STATIC", tr.exactChange, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 378, 300, 22, hwnd, 0, fontSmall)
+		exactWnd = createControl("STATIC", tr.exactChangeText, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 406, 745, 26, hwnd, 0, fontNormal)
+		safetyWnd = createControl("STATIC", tr.safetyLine, WS_CHILD|WS_VISIBLE|SS_LEFT, 30, 438, 745, 24, hwnd, 0, fontSmall)
+
