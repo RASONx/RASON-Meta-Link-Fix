@@ -18,6 +18,14 @@ Auf dem betroffenen Quest-3-/NVIDIA-System, auf dem dieses Projekt praktisch get
 
 Das ist ein erfolgreicher Praxistest auf einem tatsächlich betroffenen System, aber **keine Garantie dafür, dass damit jedes Meta-Link-Problem auf jedem PC gelöst wird**.
 
+## Einsatzbereich: Stabilitäts-Workaround, kein Air-Link-Tuning
+
+Dieses Projekt ist als **Stabilitäts-Workaround für betroffene Meta-Link-Nutzer** gedacht, insbesondere für Systeme mit Freezes oder starkem Stuttering unter neueren NVIDIA-Treibern.
+
+Es ist **kein** Tuning für Air-Link-Bitrate, Latenz oder Bildqualität. Das Deaktivieren von Sliced Encoding ist ein Kompromiss: Bei manchen Air-Link-Setups kann es für Performance oder Bitratenverhalten sinnvoller sein, Sliced Encoding aktiviert zu lassen.
+
+Wenn dein Air-Link-Setup mit aktiviertem Sliced Encoding besser funktioniert, ist dieses Tool kein Upgrade. Nutze **Original wiederherstellen** und behalte die Konfiguration, die auf deinem System am besten läuft.
+
 ## Manuelle Alternative / warum überhaupt eine App?
 
 Sliced Encoding kann auch direkt im **Oculus Debug Tool (ODT)** deaktiviert oder derselbe Registry-Wert manuell gesetzt werden. Dieses Projekt behauptet ausdrücklich nicht, einen geheimen Treiber-Patch zu enthalten.
