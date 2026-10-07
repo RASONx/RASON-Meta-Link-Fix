@@ -18,6 +18,14 @@ On the affected Quest 3 + NVIDIA system used to validate this project, frequent 
 
 That is a real-world validation of this workaround on one affected system, **not a guarantee that it will solve every Meta Link issue on every PC**.
 
+## Scope: stability workaround, not Air Link tuning
+
+This project is intended as a **stability workaround for affected Meta Link users**, specifically for systems experiencing freezes or severe stutter with newer NVIDIA drivers.
+
+It is **not** an Air Link bitrate, latency, or image-quality optimization. Disabling Sliced Encoding is a trade-off: on some Air Link setups, leaving Sliced Encoding enabled may be preferable for performance or bitrate behavior.
+
+If your Air Link setup works better with Sliced Encoding enabled, do not treat this tool as an upgrade. Use **Restore Original** and keep the configuration that works best for your system.
+
 ## Manual alternative / why an app?
 
 You can also disable Sliced Encoding manually in **Oculus Debug Tool (ODT)** or by setting the same registry value yourself. This project does not claim to contain a secret driver patch.
